@@ -30,15 +30,27 @@ class ViewController: UIViewController {
     }
     
     func layoutCollectionView() {
-        let flowLayout = UICollectionViewFlowLayout()
-        flowLayout.scrollDirection = .vertical
-        flowLayout.minimumInteritemSpacing = 10
+        let flowLayout: UICollectionViewFlowLayout = {
+            let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
+            layout.scrollDirection = .vertical
+            layout.minimumInteritemSpacing = 10
+            layout.headerReferenceSize = CGSize(width: self.view.frame.width, height: 100)
+            let size = (self.view.frame.width - 80) / 2
+            layout.itemSize = CGSize(width: size, height: size )
+            let safeArea = self.view.safeAreaInsets
+            layout.sectionInset = UIEdgeInsets(top: safeArea.top, left: safeArea.left + 20, bottom: safeArea.bottom, right: safeArea.right + 20)
+            return layout
+        }()
         
-        let collectionView = UICollectionView(frame: self.view.safeAreaLayoutGuide.layoutFrame, collectionViewLayout: flowLayout)
-        collectionView.register(PhotoCollectionViewCell.self, forCellWithReuseIdentifier: PhotoCollectionViewCell.identifier)
-        collectionView.dataSource = self
-        collectionView.delegate = self
-        collectionView.backgroundColor = .white
+        let collectionView: UICollectionView = {
+            let collection:UICollectionView = UICollectionView(frame: self.view.safeAreaLayoutGuide.layoutFrame, collectionViewLayout: flowLayout)
+            collection.register(PhotoCollectionViewCell.self, forCellWithReuseIdentifier: PhotoCollectionViewCell.identifier)
+            collection.register(TitleHeaderView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: TitleHeaderView.identifier)
+            collection.dataSource = self
+            collection.delegate = self
+            collection.backgroundColor = .white
+            return collection
+        }()
         
         self.view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
@@ -48,12 +60,14 @@ class ViewController: UIViewController {
             collectionView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor)
         ])
+        
         self.collectionView = collectionView
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        self.title = "앨범"
         layoutCollectionView()
         
         let photoAuthorizationStatus = PHPhotoLibrary.authorizationStatus()
@@ -103,7 +117,7 @@ extension ViewController: UICollectionViewDataSource {
         guard let cell: PhotoCollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: PhotoCollectionViewCell.identifier, for: indexPath) as? PhotoCollectionViewCell else {
             return UICollectionViewCell()
         }
-        imageManager.requestImage(for: self.fetchResult[indexPath.item], targetSize: CGSize(width: 30.0, height: 30.0), contentMode: .aspectFill, options: nil, resultHandler: { image, _ in
+        imageManager.requestImage(for: self.fetchResult[indexPath.item], targetSize: CGSize(width: 150.0, height: 150.0), contentMode: .aspectFill, options: nil, resultHandler: { image, _ in
             cell.imageView.image = image
         })
         
@@ -113,12 +127,14 @@ extension ViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
         switch kind {
         case UICollectionView.elementKindSectionHeader:
-            return collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "titleViewCell", for: indexPath)
+            guard let headerSectionView: TitleHeaderView = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: TitleHeaderView.identifier, for: indexPath) as? TitleHeaderView else {
+                return UICollectionReusableView()
+            }
+            return headerSectionView
         default:
             assert(false)
         }
     }
-    
 }
 
 extension ViewController: UICollectionViewDelegate {
