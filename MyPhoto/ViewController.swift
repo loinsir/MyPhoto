@@ -35,7 +35,7 @@ class ViewController: UIViewController {
             layout.scrollDirection = .vertical
             layout.minimumInteritemSpacing = 10
             layout.headerReferenceSize = CGSize(width: self.view.frame.width, height: 100)
-            let size = (self.view.frame.width - 80) / 2
+            let size = (self.view.frame.width - 50) / 2
             layout.itemSize = CGSize(width: size, height: size)
             let safeArea = self.view.safeAreaInsets
             layout.sectionInset = UIEdgeInsets(top: safeArea.top, left: safeArea.left + 20, bottom: safeArea.bottom, right: safeArea.right + 20)
@@ -48,7 +48,7 @@ class ViewController: UIViewController {
             collection.register(TitleHeaderView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: TitleHeaderView.identifier)
             collection.dataSource = self
             collection.delegate = self
-            collection.backgroundColor = .white
+            collection.backgroundColor = .systemBackground
             return collection
         }()
         
@@ -117,11 +117,12 @@ extension ViewController: UICollectionViewDataSource {
         guard let cell: PhotoCollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: PhotoCollectionViewCell.identifier, for: indexPath) as? PhotoCollectionViewCell else {
             return UICollectionViewCell()
         }
-        let size = (self.view.frame.width - 80) / 2
+        let size = (self.view.frame.width - 20) / 2
         let targetSize: CGSize = CGSize(width: size, height: size)
-        let options = PHImageRequestOptions()
-        options.resizeMode = .exact
-        imageManager.requestImage(for: self.fetchResult[indexPath.item], targetSize: targetSize, contentMode: .aspectFill, options: options, resultHandler: { image, _ in
+        
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.resizeMode = .exact
+        imageManager.requestImage(for: self.fetchResult[indexPath.item], targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: { image, _ in
             cell.imageView.image = image
         })
         
@@ -145,4 +146,6 @@ extension ViewController: UICollectionViewDelegate {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
+    
+   
 }

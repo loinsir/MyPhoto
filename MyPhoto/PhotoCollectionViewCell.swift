@@ -14,6 +14,9 @@ class PhotoCollectionViewCell: UICollectionViewCell {
     let imageView: UIImageView = UIImageView()
     
     func layoutImageView() {
+        self.layer.cornerRadius = 17.0
+        self.layer.masksToBounds = true
+        
         self.addSubview(imageView)
         imageView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
