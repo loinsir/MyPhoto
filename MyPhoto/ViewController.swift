@@ -8,25 +8,50 @@
 import UIKit
 import Photos
 
+class Album {
+    var title: String
+    var count: Int
+    var collection: PHAssetCollection
+    
+    init(title: String, count: Int, collection: PHAssetCollection) {
+        self.title = title
+        self.count = count
+        self.collection = collection
+    }
+}
+
 class ViewController: UIViewController {
     
     weak var collectionView: UICollectionView!
-
-    var fetchResult: PHFetchResult<PHAsset>!
+    
     let imageManager: PHCachingImageManager = PHCachingImageManager()
+    var albums: [Album] = []
+    var albumCoverAssets: [PHAsset] = []
     
     func requestCollection() {
-        let cameraRoll: PHFetchResult<PHAssetCollection> = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumUserLibrary, options: nil)
+        let smartAlbum: PHFetchResult<PHAssetCollection> = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumUserLibrary, options: nil)
+        let favoriteAlbums: PHFetchResult<PHAssetCollection> = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumFavorites, options: nil)
+        let albumRegular: PHFetchResult<PHAssetCollection> = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: nil)
         
-        guard let cameraRollCollection = cameraRoll.firstObject else {
-            print("CameraRollCollection: 0")
-            return
-        }
+        [smartAlbum, favoriteAlbums, albumRegular].forEach({
+            $0.enumerateObjects({(collection, index, _) in
+                guard let title = collection.localizedTitle else {
+                    return
+                }
+                print(title)
+                
+                let options = PHFetchOptions()
+                options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                let assets: PHFetchResult<PHAsset> = PHAsset.fetchAssets(in: collection, options: options)
+                self.albums.append(Album(title: title, count: assets.count, collection: collection))
+                
+                guard let albumCoverAsset: PHAsset = assets.firstObject else {
+                    return
+                }
+                self.albumCoverAssets.append(albumCoverAsset)
+            })
+        })
         
-        let fetchOptions: PHFetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [ NSSortDescriptor(key: "creationDate", ascending: false) ]
-        self.fetchResult = PHAsset.fetchAssets(in: cameraRollCollection, options: fetchOptions)
-        print(self.fetchResult.count)
     }
     
     func layoutCollectionView() {
@@ -36,14 +61,14 @@ class ViewController: UIViewController {
             layout.minimumInteritemSpacing = 10
             layout.headerReferenceSize = CGSize(width: self.view.frame.width, height: 100)
             let size = (self.view.frame.width - 50) / 2
-            layout.itemSize = CGSize(width: size, height: size)
+            layout.itemSize = CGSize(width: size, height: size * 1.3)
             let safeArea = self.view.safeAreaInsets
             layout.sectionInset = UIEdgeInsets(top: safeArea.top, left: safeArea.left + 20, bottom: safeArea.bottom, right: safeArea.right + 20)
             return layout
         }()
         
         let collectionView: UICollectionView = {
-            let collection:UICollectionView = UICollectionView(frame: self.view.safeAreaLayoutGuide.layoutFrame, collectionViewLayout: flowLayout)
+            let collection: UICollectionView = UICollectionView(frame: self.view.safeAreaLayoutGuide.layoutFrame, collectionViewLayout: flowLayout)
             collection.register(PhotoCollectionViewCell.self, forCellWithReuseIdentifier: PhotoCollectionViewCell.identifier)
             collection.register(TitleHeaderView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: TitleHeaderView.identifier)
             collection.dataSource = self
@@ -63,10 +88,11 @@ class ViewController: UIViewController {
         
         self.collectionView = collectionView
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        self.view.backgroundColor = .systemBackground
         self.title = "앨범"
         layoutCollectionView()
         
@@ -104,13 +130,13 @@ class ViewController: UIViewController {
         @unknown default:
             break
         }
-//        PHPhotoLibrary.shared().register(self)
+        //        PHPhotoLibrary.shared().register(self)
     }
 }
 
 extension ViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        self.fetchResult?.count ?? 0
+        self.albumCoverAssets.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -122,9 +148,12 @@ extension ViewController: UICollectionViewDataSource {
         
         let requestOptions = PHImageRequestOptions()
         requestOptions.resizeMode = .exact
-        imageManager.requestImage(for: self.fetchResult[indexPath.item], targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: { image, _ in
+        print(self.albumCoverAssets.count)
+        imageManager.requestImage(for: self.albumCoverAssets[indexPath.item], targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: { image, _ in
             cell.imageView.image = image
         })
+        cell.albumTitle.text = self.albums[indexPath.item].title
+        cell.photoCount.text = String.init(self.albums[indexPath.item].count)
         
         return cell
     }
@@ -140,12 +169,21 @@ extension ViewController: UICollectionViewDataSource {
             assert(false)
         }
     }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let photoListViewController: PhotoListViewController = {
+            let viewController: PhotoListViewController = PhotoListViewController()
+            let currentAlbum = self.albums[indexPath.item]
+            viewController.album = currentAlbum.collection
+            viewController.title = currentAlbum.title
+            return viewController
+        }()
+        self.navigationController?.pushViewController(photoListViewController, animated: true)
+    }
 }
 
 extension ViewController: UICollectionViewDelegate {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
-    
-   
 }

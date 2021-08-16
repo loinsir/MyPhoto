@@ -10,6 +10,7 @@ import UIKit
 class TitleHeaderView: UICollectionReusableView {
     
     let albumTitle: UILabel = UILabel()
+    let separator: UIView = UIView()
     
     static let identifier: String = "headerView"
     
@@ -17,11 +18,19 @@ class TitleHeaderView: UICollectionReusableView {
         albumTitle.text = "앨범"
         albumTitle.font = UIFont.boldSystemFont(ofSize: 33)
         albumTitle.translatesAutoresizingMaskIntoConstraints = false
+        
+        separator.backgroundColor = .systemGray5
+        separator.translatesAutoresizingMaskIntoConstraints = false
+
         self.addSubview(albumTitle)
+        self.addSubview(separator)
         
         NSLayoutConstraint.activate([
-            albumTitle.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 10.0),
-            albumTitle.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -10.0)
+            albumTitle.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 20.0),
+            albumTitle.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -12.0),
+            separator.widthAnchor.constraint(equalTo: self.widthAnchor, constant: 0.5),
+            separator.heightAnchor.constraint(equalToConstant: 2.0),
+            separator.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -9.0)
         ])
     }
     
