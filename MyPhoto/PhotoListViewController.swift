@@ -16,6 +16,8 @@ class PhotoListViewController: UIViewController {
     weak var collectionView: UICollectionView?
     let imageManager: PHCachingImageManager = PHCachingImageManager()
     
+    lazy var imageSize: CGFloat = self.view.frame.width * 0.325
+    
     func requestCollections() {
         guard let fetchAlbum: PHAssetCollection = self.album else {
             return
@@ -31,19 +33,17 @@ class PhotoListViewController: UIViewController {
         
         let flowLayout: UICollectionViewFlowLayout = {
             let layout = UICollectionViewFlowLayout()
-            let size: CGFloat = self.view.frame.width * 0.3
-            layout.itemSize = CGSize(width: size, height: size)
+            layout.itemSize = CGSize(width: imageSize, height: imageSize)
             layout.scrollDirection = .vertical
-            layout.minimumLineSpacing = 10.0
-            layout.minimumInteritemSpacing = 10
-            layout.minimumLineSpacing = 10
+            layout.minimumLineSpacing = 4
+            layout.minimumInteritemSpacing = 4
             return layout
         }()
         
         let collectionView: UICollectionView = {
             let collection: UICollectionView = UICollectionView(frame: self.view.safeAreaLayoutGuide.layoutFrame,
                                                                 collectionViewLayout: flowLayout)
-            collection.register(UICollectionViewCell.self, forCellWithReuseIdentifier: "default")
+            collection.register(PhotoCollectionViewCell.self, forCellWithReuseIdentifier: PhotoCollectionViewCell.identifier)
             collection.dataSource = self
             collection.delegate = self
             collection.backgroundColor = .systemBackground
@@ -97,22 +97,21 @@ extension PhotoListViewController: UICollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "default", for: indexPath)
+        guard let cell: PhotoCollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: PhotoCollectionViewCell.identifier, for: indexPath) as? PhotoCollectionViewCell else {
+            return UICollectionViewCell()
+        }
         
         let requestOptions = PHImageRequestOptions()
         requestOptions.resizeMode = .exact
-        let size: CGFloat = self.view.frame.width * 0.3
-        let targetSize = CGSize(width: size, height: size)
+
+        let targetSize = CGSize(width: imageSize, height: imageSize)
         
         guard let currentFetchResult = self.fetchResult?[indexPath.item] else {
             return UICollectionViewCell()
         }
         
         imageManager.requestImage(for: currentFetchResult, targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: {(image, _) in
-            let imageView = UIImageView(image: image)
-            OperationQueue.main.addOperation {
-                cell.contentView.addSubview(imageView)
-            }
+            cell.imageView.image = image
         })
         
         return cell

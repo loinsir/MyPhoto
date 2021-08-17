@@ -69,7 +69,7 @@ class ViewController: UIViewController {
         
         let collectionView: UICollectionView = {
             let collection: UICollectionView = UICollectionView(frame: self.view.safeAreaLayoutGuide.layoutFrame, collectionViewLayout: flowLayout)
-            collection.register(PhotoCollectionViewCell.self, forCellWithReuseIdentifier: PhotoCollectionViewCell.identifier)
+            collection.register(AlbumCollectionViewCell.self, forCellWithReuseIdentifier: AlbumCollectionViewCell.identifier)
             collection.register(TitleHeaderView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: TitleHeaderView.identifier)
             collection.dataSource = self
             collection.delegate = self
@@ -130,7 +130,7 @@ class ViewController: UIViewController {
         @unknown default:
             break
         }
-        //        PHPhotoLibrary.shared().register(self)
+//        PHPhotoLibrary.shared().register(self)
     }
 }
 
@@ -140,7 +140,7 @@ extension ViewController: UICollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell: PhotoCollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: PhotoCollectionViewCell.identifier, for: indexPath) as? PhotoCollectionViewCell else {
+        guard let cell: AlbumCollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: AlbumCollectionViewCell.identifier, for: indexPath) as? AlbumCollectionViewCell else {
             return UICollectionViewCell()
         }
         let size = (self.view.frame.width - 20) / 2
