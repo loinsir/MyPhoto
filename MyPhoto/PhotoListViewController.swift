@@ -16,15 +16,16 @@ class PhotoListViewController: UIViewController {
     weak var collectionView: UICollectionView?
     let imageManager: PHCachingImageManager = PHCachingImageManager()
     
+    var arrangeButton: UIBarButtonItem?
     lazy var imageSize: CGFloat = self.view.frame.width * 0.325
     
-    func requestCollections() {
+    func requestCollections(ascending: Bool) {
         guard let fetchAlbum: PHAssetCollection = self.album else {
             return
         }
         
         let fetchOptions: PHFetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: ascending)]
         let fetchResult: PHFetchResult<PHAsset> = PHAsset.fetchAssets(in: fetchAlbum, options: fetchOptions)
         self.fetchResult = fetchResult
     }
@@ -35,8 +36,8 @@ class PhotoListViewController: UIViewController {
             let layout = UICollectionViewFlowLayout()
             layout.itemSize = CGSize(width: imageSize, height: imageSize)
             layout.scrollDirection = .vertical
-            layout.minimumLineSpacing = 4
-            layout.minimumInteritemSpacing = 4
+            layout.minimumLineSpacing = 2
+            layout.minimumInteritemSpacing = 2
             return layout
         }()
         
@@ -63,13 +64,54 @@ class PhotoListViewController: UIViewController {
         
         self.collectionView = collectionView
     }
+    
+    func layoutToolbar() {
+//        let toolbar = UIToolbar()
+//        view.addSubview(toolbar)
+        
+//        toolbar.translatesAutoresizingMaskIntoConstraints = false
+        
+        let arrangeButton: UIBarButtonItem = UIBarButtonItem(title: "최신순", style: .plain, target: self, action: #selector(touchArrangeButton(_:)))
+        let spacer: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        self.toolbarItems = [spacer, arrangeButton, spacer]
+        self.navigationController?.isToolbarHidden = false
+        self.navigationController?.toolbar.contentMode = .center
+//        self.navigationController?.toolbar.contentMode = .center
+//        self.toolbarItems.
+        
+//        NSLayoutConstraint.activate([
+//            toolbar.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+//            toolbar.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+//            toolbar.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+//        ])
+        self.arrangeButton = arrangeButton
+    }
+    
+    @objc func touchArrangeButton(_ sender: UIBarButtonItem) {
+        switch sender.title {
+        case "최신순":
+            requestCollections(ascending: false)
+            self.arrangeButton?.title = "과거순"
+        case "과거순":
+            requestCollections(ascending: true)
+            self.arrangeButton?.title = "최신순"
+        case .none:
+            return
+        case .some(_):
+            return
+        }
+        
+        self.collectionView?.reloadSections(IndexSet(0...0))
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         self.view.backgroundColor = .systemBackground
-        requestCollections()
+        requestCollections(ascending: true) //initial ascending = true
         layoutCollectionView()
+        layoutToolbar()
+        
     }
     
 
