@@ -13,11 +13,13 @@ class PhotoListViewController: UIViewController {
     var album: PHAssetCollection?
     var fetchResult: PHFetchResult<PHAsset>?
     
+    var editButton: UIBarButtonItem?
+    
     weak var collectionView: UICollectionView?
     let imageManager: PHCachingImageManager = PHCachingImageManager()
     
     var arrangeButton: UIBarButtonItem?
-    lazy var imageSize: CGFloat = self.view.frame.width * 0.325
+    lazy var cellImageWidth: CGFloat = self.view.frame.width * 0.325
     
     func requestCollections(ascending: Bool) {
         guard let fetchAlbum: PHAssetCollection = self.album else {
@@ -34,7 +36,7 @@ class PhotoListViewController: UIViewController {
         
         let flowLayout: UICollectionViewFlowLayout = {
             let layout = UICollectionViewFlowLayout()
-            layout.itemSize = CGSize(width: imageSize, height: imageSize)
+            layout.itemSize = CGSize(width: cellImageWidth, height: cellImageWidth)
             layout.scrollDirection = .vertical
             layout.minimumLineSpacing = 2
             layout.minimumInteritemSpacing = 2
@@ -66,25 +68,30 @@ class PhotoListViewController: UIViewController {
     }
     
     func layoutToolbar() {
-//        let toolbar = UIToolbar()
-//        view.addSubview(toolbar)
-        
-//        toolbar.translatesAutoresizingMaskIntoConstraints = false
-        
         let arrangeButton: UIBarButtonItem = UIBarButtonItem(title: "최신순", style: .plain, target: self, action: #selector(touchArrangeButton(_:)))
         let spacer: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         self.toolbarItems = [spacer, arrangeButton, spacer]
         self.navigationController?.isToolbarHidden = false
-        self.navigationController?.toolbar.contentMode = .center
-//        self.navigationController?.toolbar.contentMode = .center
-//        self.toolbarItems.
-        
-//        NSLayoutConstraint.activate([
-//            toolbar.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
-//            toolbar.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
-//            toolbar.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
-//        ])
         self.arrangeButton = arrangeButton
+    }
+    
+    func layoutEditButton() {
+        let editButton: UIBarButtonItem = UIBarButtonItem(title: "선택", style: .plain, target: self, action: #selector(touchSelectButton(_:)))
+        self.navigationItem.setRightBarButtonItems([editButton], animated: true)
+        self.editButton = editButton
+    }
+    
+    @objc func touchSelectButton(_ sender: UIBarButtonItem) {
+//        switch sender.title {
+//        case "선택":
+//            self.editButton?.title = "취소"
+//            self.title = "항목 선택"
+//        case "취소":
+//            self.editButton?.title = "선택"
+//            self.title = "
+//        }
+        self.collectionView?.isEditing = true
+        self.collectionView?.allowsMultipleSelectionDuringEditing = true
     }
     
     @objc func touchArrangeButton(_ sender: UIBarButtonItem) {
@@ -111,7 +118,12 @@ class PhotoListViewController: UIViewController {
         requestCollections(ascending: true) //initial ascending = true
         layoutCollectionView()
         layoutToolbar()
-        
+        layoutEditButton()
+    }
+    
+    override func setEditing(_ editing: Bool, animated: Bool) {
+        super.setEditing(editing, animated: animated)
+        collectionView?.allowsMultipleSelection = editing
     }
     
 
@@ -131,6 +143,19 @@ extension PhotoListViewController: UICollectionViewDelegate {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
+    
+    func collectionView(_ collectionView: UICollectionView, canEditItemAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let asset = self.fetchResult?[indexPath.item] else {
+            return
+        }
+        let detailPhotoViewController = DetailPhotoViewController()
+        detailPhotoViewController.asset = asset
+        self.navigationController?.pushViewController(detailPhotoViewController, animated: true)
+    }
 }
 
 extension PhotoListViewController: UICollectionViewDataSource {
@@ -146,16 +171,22 @@ extension PhotoListViewController: UICollectionViewDataSource {
         let requestOptions = PHImageRequestOptions()
         requestOptions.resizeMode = .exact
 
-        let targetSize = CGSize(width: imageSize, height: imageSize)
+        let targetSize = CGSize(width: cellImageWidth, height: cellImageWidth)
         
         guard let currentFetchResult = self.fetchResult?[indexPath.item] else {
             return UICollectionViewCell()
         }
         
-        imageManager.requestImage(for: currentFetchResult, targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: {(image, _) in
-            cell.imageView.image = image
-        })
+        OperationQueue().addOperation({ self.imageManager.requestImage(for: currentFetchResult, targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: {(image, _) in
+            OperationQueue.main.addOperation {
+                cell.imageView.image = image
+            }
+        })})
         
         return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, canFocusItemAt indexPath: IndexPath) -> Bool {
+        return true
     }
 }
