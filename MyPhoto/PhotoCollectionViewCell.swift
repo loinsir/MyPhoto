@@ -24,6 +24,16 @@ class PhotoCollectionViewCell: UICollectionViewCell {
         ])
     }
     
+    override var isSelected: Bool {
+        didSet {
+            if isSelected {
+                self.imageView.layer.borderWidth = 4.0
+            } else {
+                self.imageView.layer.borderWidth = 0.0
+            }
+        }
+    }
+    
     override func prepareForReuse() {
         super.prepareForReuse()
         imageView.image = nil
