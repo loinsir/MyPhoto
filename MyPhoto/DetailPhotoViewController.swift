@@ -25,10 +25,10 @@ class DetailPhotoViewController: UIViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: self.view.topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor),
         ])
         
         self.scrollView = scrollView
@@ -38,10 +38,15 @@ class DetailPhotoViewController: UIViewController {
         
         self.scrollView?.addSubview(self.imageView)
         self.imageView.translatesAutoresizingMaskIntoConstraints = false
+        self.imageView.contentMode = .scaleAspectFit
+        
+        guard let scrollView: UIScrollView = self.scrollView else {
+            return
+        }
 
         NSLayoutConstraint.activate([
-            self.imageView.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
-            self.imageView.centerYAnchor.constraint(equalTo: self.view.centerYAnchor),
+            self.imageView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            self.imageView.heightAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.heightAnchor)
         ])
     }
     
@@ -50,12 +55,9 @@ class DetailPhotoViewController: UIViewController {
             return
         }
         
-        let targetSize: CGSize = CGSize(width: self.view.frame.width, height: self.view.frame.height)
+        let targetSize: CGSize = CGSize(width: requestAsset.pixelWidth, height: requestAsset.pixelHeight)
         
-        let requestOptions = PHImageRequestOptions()
-        requestOptions.resizeMode = .exact
-        
-        imageManager.requestImage(for: requestAsset, targetSize: targetSize, contentMode: .aspectFit, options: requestOptions, resultHandler: { image, _ in
+        imageManager.requestImage(for: requestAsset, targetSize: targetSize, contentMode: .aspectFill, options: nil, resultHandler: { image, _ in
             self.imageView.image = image
         })
     }
