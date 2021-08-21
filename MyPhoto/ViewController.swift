@@ -38,7 +38,6 @@ class ViewController: UIViewController {
                 guard let title = collection.localizedTitle else {
                     return
                 }
-                print(title)
                 
                 let options = PHFetchOptions()
                 options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
@@ -130,7 +129,6 @@ class ViewController: UIViewController {
         @unknown default:
             break
         }
-//        PHPhotoLibrary.shared().register(self)
     }
 }
 
@@ -148,7 +146,6 @@ extension ViewController: UICollectionViewDataSource {
         
         let requestOptions = PHImageRequestOptions()
         requestOptions.resizeMode = .exact
-        print(self.albumCoverAssets.count)
         imageManager.requestImage(for: self.albumCoverAssets[indexPath.item], targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: { image, _ in
             cell.imageView.image = image
         })

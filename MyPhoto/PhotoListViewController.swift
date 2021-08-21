@@ -13,16 +13,20 @@ class PhotoListViewController: UIViewController {
     var album: PHAssetCollection?
     var fetchResult: PHFetchResult<PHAsset>?
     
-    var selectButton: UIBarButtonItem?
+    lazy var selectButton: UIBarButtonItem = UIBarButtonItem(title: "선택", style: .plain, target: self, action: #selector(touchSelectButton(_:)))
     var selectMode: Bool = false
     
     weak var collectionView: UICollectionView?
     let imageManager: PHCachingImageManager = PHCachingImageManager()
     
-    var arrangeButton: UIBarButtonItem?
+    // Toolbar
+    lazy var activityViewButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(touchShareButton(_:)))
+    lazy var arrangeButton: UIBarButtonItem = UIBarButtonItem(title: "최신순", style: .plain, target: self, action: #selector(touchArrangeButton(_:)))
+    lazy var deleteButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: nil)
+    
     lazy var cellImageWidth: CGFloat = self.view.frame.width * 0.325
     
-    var selectedCellIndexPaths: [IndexPath] = []
+    var dictionarySelectedCell: [IndexPath: Bool] = [:]
     
     func requestCollections(ascending: Bool) {
         guard let fetchAlbum: PHAssetCollection = self.album else {
@@ -71,17 +75,21 @@ class PhotoListViewController: UIViewController {
     }
     
     func layoutToolbar() {
-        let arrangeButton: UIBarButtonItem = UIBarButtonItem(title: "최신순", style: .plain, target: self, action: #selector(touchArrangeButton(_:)))
         let spacer: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        self.toolbarItems = [spacer, arrangeButton, spacer]
+        activityViewButton.isEnabled = false
+        deleteButton.isEnabled = false
+        self.toolbarItems = [activityViewButton, spacer, arrangeButton, spacer, deleteButton]
         self.navigationController?.isToolbarHidden = false
-        self.arrangeButton = arrangeButton
     }
     
     func layoutSelectButton() {
-        let selectButton: UIBarButtonItem = UIBarButtonItem(title: "선택", style: .plain, target: self, action: #selector(touchSelectButton(_:)))
         self.navigationItem.setRightBarButtonItems([selectButton], animated: true)
-        self.selectButton = selectButton
+    }
+    
+    @objc func touchShareButton(_ sender: UIBarButtonItem) { // skeletonCode
+        let sampleImage: UIImage = UIImage()
+        let activityViewController = UIActivityViewController(activityItems: [sampleImage], applicationActivities: nil)
+        self.present(activityViewController, animated: true, completion: nil)
     }
     
     @objc func touchSelectButton(_ sender: UIBarButtonItem) {
@@ -90,17 +98,21 @@ class PhotoListViewController: UIViewController {
             sender.title = "취소"
             self.selectMode = true
             self.title = "항목 선택"
-            self.arrangeButton?.isEnabled = false
+            self.arrangeButton.isEnabled = false
             self.collectionView?.allowsMultipleSelection = true
+            self.activityViewButton.isEnabled = false
 
         case "취소":
             sender.title = "선택"
             self.selectMode = false
             self.title = self.album?.localizedTitle
             self.navigationController?.toolbar.isUserInteractionEnabled = true
-            self.arrangeButton?.isEnabled = true
+            self.arrangeButton.isEnabled = true
             self.collectionView?.allowsMultipleSelection = false
-            self.selectedCellIndexPaths.forEach({self.collectionView?.deselectItem(at: $0, animated: true)})
+            self.dictionarySelectedCell.forEach({indexPath, _ in self.collectionView?.deselectItem(at: indexPath, animated: true)})
+            self.dictionarySelectedCell.removeAll()
+            self.activityViewButton.isEnabled = false
+            self.deleteButton.isEnabled = false
         default:
             return
         }
@@ -111,10 +123,10 @@ class PhotoListViewController: UIViewController {
         switch sender.title {
         case "최신순":
             requestCollections(ascending: false)
-            self.arrangeButton?.title = "과거순"
+            self.arrangeButton.title = "과거순"
         case "과거순":
             requestCollections(ascending: true)
-            self.arrangeButton?.title = "최신순"
+            self.arrangeButton.title = "최신순"
         case .none:
             return
         case .some(_):
@@ -124,14 +136,16 @@ class PhotoListViewController: UIViewController {
         self.collectionView?.reloadSections(IndexSet(0...0))
     }
 
+    // MARK: - Life Cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         self.view.backgroundColor = .systemBackground
-        requestCollections(ascending: true) //initial ascending = true
+        requestCollections(ascending: false) //initial ascending = false
         layoutCollectionView()
         layoutToolbar()
         layoutSelectButton()
+        PHPhotoLibrary.shared().register(self)
     }
     
 
@@ -163,7 +177,20 @@ extension PhotoListViewController: UICollectionViewDelegate {
             detailPhotoViewController.asset = asset
             self.navigationController?.pushViewController(detailPhotoViewController, animated: true)
         case true:
-            self.selectedCellIndexPaths.append(indexPath)
+            self.dictionarySelectedCell[indexPath] = true
+            self.title = self.dictionarySelectedCell.count != 0 ? "\(self.dictionarySelectedCell.count)장 선택됨" : "항목 선택"
+            self.activityViewButton.isEnabled = true
+            self.deleteButton.isEnabled = true
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+        self.dictionarySelectedCell.removeValue(forKey: indexPath)
+        self.title = self.dictionarySelectedCell.count != 0 ? "\(self.dictionarySelectedCell.count)장 선택됨" : "항목 선택"
+        
+        if self.dictionarySelectedCell.isEmpty {
+            self.deleteButton.isEnabled = false
+            self.activityViewButton.isEnabled = false
         }
     }
     
@@ -194,5 +221,16 @@ extension PhotoListViewController: UICollectionViewDataSource {
         )
         
         return cell
+    }
+}
+
+extension PhotoListViewController: PHPhotoLibraryChangeObserver {
+    func photoLibraryDidChange(_ changeInstance: PHChange) {
+        guard let changes = changeInstance.changeDetails(for: fetchResult!) else { return }
+        
+        self.fetchResult = changes.fetchResultAfterChanges
+        OperationQueue.main.addOperation {
+            self.collectionView?.reloadSections(IndexSet(0...0))
+        }
     }
 }
