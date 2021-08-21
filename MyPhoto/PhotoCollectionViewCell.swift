@@ -11,6 +11,7 @@ class PhotoCollectionViewCell: UICollectionViewCell {
     static let identifier: String = "PhotoCollectionViewCell"
     
     let imageView: UIImageView = UIImageView()
+    let opacity: UIView = UIView()
     
     func layoutImageView() {
         self.addSubview(imageView)
@@ -28,8 +29,10 @@ class PhotoCollectionViewCell: UICollectionViewCell {
         didSet {
             if isSelected {
                 self.imageView.layer.borderWidth = 4.0
+                self.imageView.alpha = 0.75
             } else {
                 self.imageView.layer.borderWidth = 0.0
+                self.imageView.alpha = 1.0
             }
         }
     }

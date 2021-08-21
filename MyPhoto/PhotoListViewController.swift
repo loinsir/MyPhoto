@@ -92,6 +92,7 @@ class PhotoListViewController: UIViewController {
             self.title = "항목 선택"
             self.arrangeButton?.isEnabled = false
             self.collectionView?.allowsMultipleSelection = true
+
         case "취소":
             sender.title = "선택"
             self.selectMode = false
