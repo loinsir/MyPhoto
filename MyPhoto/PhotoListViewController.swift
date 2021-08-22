@@ -226,11 +226,17 @@ extension PhotoListViewController: UICollectionViewDataSource {
 
 extension PhotoListViewController: PHPhotoLibraryChangeObserver {
     func photoLibraryDidChange(_ changeInstance: PHChange) {
-        guard let changes = changeInstance.changeDetails(for: fetchResult!) else { return }
+        guard let album: PHAssetCollection = album,
+              let fetchResult: PHFetchResult<PHAsset> = fetchResult else { return }
         
-        self.fetchResult = changes.fetchResultAfterChanges
+        if let albumChanges = changeInstance.changeDetails(for: album),
+           let fetchResultChanges = changeInstance.changeDetails(for: fetchResult) {
+            self.album = albumChanges.objectAfterChanges
+            self.fetchResult = fetchResultChanges.fetchResultAfterChanges
+        }
+        
         OperationQueue.main.addOperation {
-            self.collectionView?.reloadSections(IndexSet(0...0))
+            self.collectionView?.reloadData()
         }
     }
 }

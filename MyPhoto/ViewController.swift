@@ -129,6 +129,7 @@ class ViewController: UIViewController {
         @unknown default:
             break
         }
+        PHPhotoLibrary.shared().register(self)
     }
 }
 
@@ -182,5 +183,30 @@ extension ViewController: UICollectionViewDataSource {
 extension ViewController: UICollectionViewDelegate {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
+    }
+}
+
+extension ViewController: PHPhotoLibraryChangeObserver {
+    func photoLibraryDidChange(_ changeInstance: PHChange) {
+        albums.forEach({
+            guard let changes = changeInstance.changeDetails(for: $0.collection) else { return }
+            if let changeCollection = changes.objectAfterChanges {
+                $0.collection = changeCollection
+            }
+        })
+        
+        albumCoverAssets.forEach({
+            guard let changes = changeInstance.changeDetails(for: $0) else { return }
+            if let changeAsset = changes.objectAfterChanges,
+               let originalIndex: Int = albumCoverAssets.firstIndex(of: $0) {
+                    albumCoverAssets[originalIndex] = changeAsset }
+        })
+        
+        albums.removeAll()
+        albumCoverAssets.removeAll()
+        requestCollection()
+        OperationQueue.main.addOperation {
+            self.collectionView.reloadSections(IndexSet(0...0))
+        }
     }
 }
