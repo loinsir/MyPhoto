@@ -26,7 +26,6 @@ class ViewController: UIViewController {
     
     let imageManager: PHCachingImageManager = PHCachingImageManager()
     var albums: [Album] = []
-    var albumCoverAssets: [PHAsset] = []
     
     func requestCollection() {
         let smartAlbum: PHFetchResult<PHAssetCollection> = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumUserLibrary, options: nil)
@@ -43,11 +42,6 @@ class ViewController: UIViewController {
                 options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
                 let assets: PHFetchResult<PHAsset> = PHAsset.fetchAssets(in: collection, options: options)
                 self.albums.append(Album(title: title, count: assets.count, collection: collection))
-                
-                guard let albumCoverAsset: PHAsset = assets.firstObject else {
-                    return
-                }
-                self.albumCoverAssets.append(albumCoverAsset)
             })
         })
         
@@ -135,7 +129,7 @@ class ViewController: UIViewController {
 
 extension ViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        self.albumCoverAssets.count
+        self.albums.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -147,7 +141,13 @@ extension ViewController: UICollectionViewDataSource {
         
         let requestOptions = PHImageRequestOptions()
         requestOptions.resizeMode = .exact
-        imageManager.requestImage(for: self.albumCoverAssets[indexPath.item], targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: { image, _ in
+        
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        
+        guard let albumCover: PHAsset = PHAsset.fetchAssets(in: self.albums[indexPath.item].collection, options: fetchOptions).firstObject else { return UICollectionViewCell() }
+        
+        imageManager.requestImage(for: albumCover, targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: { image, _ in
             cell.imageView.image = image
         })
         cell.albumTitle.text = self.albums[indexPath.item].title
@@ -176,6 +176,7 @@ extension ViewController: UICollectionViewDataSource {
             viewController.title = currentAlbum.title
             return viewController
         }()
+//        PHPhotoLibrary.shared().unregisterChangeObserver(self)
         self.navigationController?.pushViewController(photoListViewController, animated: true)
     }
 }
@@ -194,17 +195,7 @@ extension ViewController: PHPhotoLibraryChangeObserver {
                 $0.collection = changeCollection
             }
         })
-        
-        albumCoverAssets.forEach({
-            guard let changes = changeInstance.changeDetails(for: $0) else { return }
-            if let changeAsset = changes.objectAfterChanges,
-               let originalIndex: Int = albumCoverAssets.firstIndex(of: $0) {
-                    albumCoverAssets[originalIndex] = changeAsset }
-        })
-        
-        albums.removeAll()
-        albumCoverAssets.removeAll()
-        requestCollection()
+
         OperationQueue.main.addOperation {
             self.collectionView.reloadSections(IndexSet(0...0))
         }

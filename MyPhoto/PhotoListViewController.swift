@@ -22,11 +22,11 @@ class PhotoListViewController: UIViewController {
     // Toolbar
     lazy var activityViewButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(touchShareButton(_:)))
     lazy var arrangeButton: UIBarButtonItem = UIBarButtonItem(title: "최신순", style: .plain, target: self, action: #selector(touchArrangeButton(_:)))
-    lazy var deleteButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: nil)
+    lazy var deleteButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: #selector(touchDeleteButton(_:)))
     
     lazy var cellImageWidth: CGFloat = self.view.frame.width * 0.325
     
-    var dictionarySelectedCell: [IndexPath: Bool] = [:]
+    var dictionarySelectedCell: [IndexPath: UIImage] = [:]
     
     func requestCollections(ascending: Bool) {
         guard let fetchAlbum: PHAssetCollection = self.album else {
@@ -86,9 +86,21 @@ class PhotoListViewController: UIViewController {
         self.navigationItem.setRightBarButtonItems([selectButton], animated: true)
     }
     
-    @objc func touchShareButton(_ sender: UIBarButtonItem) { // skeletonCode
-        let sampleImage: UIImage = UIImage()
-        let activityViewController = UIActivityViewController(activityItems: [sampleImage], applicationActivities: nil)
+    @objc func touchDeleteButton(_ sender: UIBarButtonItem) {
+        var assetToDelete: [PHAsset] = []
+        dictionarySelectedCell.keys.forEach({
+                                                guard let asset: PHAsset = self.fetchResult?.object(at: $0.item) else { return }
+                                                assetToDelete.append(asset)
+                                                })
+        PHPhotoLibrary.shared().performChanges({
+            PHAssetChangeRequest.deleteAssets(assetToDelete as NSArray)
+        }, completionHandler: nil)
+    }
+    
+    @objc func touchShareButton(_ sender: UIBarButtonItem) {
+        var imageToShare: [UIImage] = []
+        dictionarySelectedCell.values.forEach({imageToShare.append($0)})
+        let activityViewController = UIActivityViewController(activityItems: imageToShare, applicationActivities: nil)
         self.present(activityViewController, animated: true, completion: nil)
     }
     
@@ -116,7 +128,6 @@ class PhotoListViewController: UIViewController {
         default:
             return
         }
-    
     }
     
     @objc func touchArrangeButton(_ sender: UIBarButtonItem) {
@@ -177,7 +188,8 @@ extension PhotoListViewController: UICollectionViewDelegate {
             detailPhotoViewController.asset = asset
             self.navigationController?.pushViewController(detailPhotoViewController, animated: true)
         case true:
-            self.dictionarySelectedCell[indexPath] = true
+            guard let cell = collectionView.cellForItem(at: indexPath) as? PhotoCollectionViewCell else { return }
+            self.dictionarySelectedCell[indexPath] = cell.imageView.image
             self.title = self.dictionarySelectedCell.count != 0 ? "\(self.dictionarySelectedCell.count)장 선택됨" : "항목 선택"
             self.activityViewButton.isEnabled = true
             self.deleteButton.isEnabled = true
@@ -217,26 +229,24 @@ extension PhotoListViewController: UICollectionViewDataSource {
         }
         
         imageManager.requestImage(for: currentFetchResult, targetSize: targetSize, contentMode: .aspectFill, options: requestOptions, resultHandler: {(image, _) in
-                                    cell.imageView.image = image}
+                                    OperationQueue.main.addOperation {
+                                        cell.imageView.image = image
+                                    }}
         )
-        
         return cell
     }
 }
 
 extension PhotoListViewController: PHPhotoLibraryChangeObserver {
     func photoLibraryDidChange(_ changeInstance: PHChange) {
-        guard let album: PHAssetCollection = album,
-              let fetchResult: PHFetchResult<PHAsset> = fetchResult else { return }
+        guard let originalFetchResults: PHFetchResult<PHAsset> = self.fetchResult else { return }
         
-        if let albumChanges = changeInstance.changeDetails(for: album),
-           let fetchResultChanges = changeInstance.changeDetails(for: fetchResult) {
-            self.album = albumChanges.objectAfterChanges
+        if let fetchResultChanges = changeInstance.changeDetails(for: originalFetchResults) {
             self.fetchResult = fetchResultChanges.fetchResultAfterChanges
         }
         
         OperationQueue.main.addOperation {
-            self.collectionView?.reloadData()
+            self.collectionView?.reloadSections(IndexSet(0...0))
         }
     }
 }
