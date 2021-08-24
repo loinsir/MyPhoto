@@ -15,6 +15,11 @@ class DetailPhotoViewController: UIViewController {
     let imageView: UIImageView = UIImageView()
     let imageManager: PHImageManager = PHImageManager()
     
+    //toolbar
+    lazy var activityViewButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(touchShareButton(_:)))
+    lazy var favoriteButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .organize, target: self, action: #selector(touchFavoriteButton(_:)))
+    lazy var deleteButton: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: #selector(touchDeleteButton(_:)))
+    
     func layoutScrollView() {
         let scrollView: UIScrollView = UIScrollView(frame: self.view.frame)
         scrollView.maximumZoomScale = 3.0
@@ -50,6 +55,14 @@ class DetailPhotoViewController: UIViewController {
         ])
     }
     
+    func layoutToolbar() {
+        let spacer: UIBarButtonItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        guard let asset: PHAsset = asset else { return }
+        favoriteButton.tintColor = asset.isFavorite ? UIColor.systemRed : UIColor.systemBlue
+        self.toolbarItems = [activityViewButton, spacer, favoriteButton, spacer, deleteButton]
+        self.navigationController?.isToolbarHidden = false
+    }
+    
     func requestImage() {
         guard let requestAsset: PHAsset = asset else {
             return
@@ -61,6 +74,39 @@ class DetailPhotoViewController: UIViewController {
             self.imageView.image = image
         })
     }
+    
+    @objc func touchShareButton(_ sender: UIBarButtonItem) {
+        guard let imageToshare: UIImage = imageView.image else { return }
+        let activityViewController = UIActivityViewController(activityItems: [imageToshare], applicationActivities: nil)
+        self.present(activityViewController, animated: true, completion: nil)
+    }
+    
+    @objc func touchFavoriteButton(_ sender: UIBarButtonItem) {
+        guard let targetAsset: PHAsset = self.asset else { return }
+        PHPhotoLibrary.shared().performChanges({
+            let request: PHAssetChangeRequest = PHAssetChangeRequest(for: targetAsset)
+            request.isFavorite = !targetAsset.isFavorite
+        }, completionHandler: { _,_ in
+            OperationQueue.main.addOperation {
+                if self.favoriteButton.tintColor == .systemRed {
+                    self.favoriteButton.tintColor = .systemBlue
+                } else {
+                    self.favoriteButton.tintColor = .systemRed
+                }
+            }
+        })
+    }
+    
+    @objc func touchDeleteButton(_ sender: UIBarButtonItem) {
+        guard let assetToDelete: PHAsset = asset else { return }
+        PHPhotoLibrary.shared().performChanges({
+            PHAssetChangeRequest.deleteAssets([assetToDelete] as NSArray)
+        }, completionHandler: { _,_ in
+            OperationQueue.main.addOperation {
+                self.navigationController?.popViewController(animated: true)
+            }
+        })
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -69,6 +115,12 @@ class DetailPhotoViewController: UIViewController {
         requestImage()
         layoutScrollView()
         layoutImageView()
+        layoutToolbar()
+        PHPhotoLibrary.shared().register(self)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        PHPhotoLibrary.shared().unregisterChangeObserver(self)
     }
     
 
@@ -87,5 +139,13 @@ class DetailPhotoViewController: UIViewController {
 extension DetailPhotoViewController: UIScrollViewDelegate {
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
         return self.imageView
+    }
+}
+
+extension DetailPhotoViewController: PHPhotoLibraryChangeObserver {
+    func photoLibraryDidChange(_ changeInstance: PHChange) {
+        OperationQueue.main.addOperation {
+            self.navigationController?.popViewController(animated: true)
+        }
     }
 }

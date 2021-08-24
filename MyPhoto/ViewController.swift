@@ -12,11 +12,13 @@ class Album {
     var title: String
     var count: Int
     var collection: PHAssetCollection
+    var fetchResult: PHFetchResult<PHAsset>
     
-    init(title: String, count: Int, collection: PHAssetCollection) {
+    init(title: String, count: Int, collection: PHAssetCollection, fetchResult: PHFetchResult<PHAsset>) {
         self.title = title
         self.count = count
         self.collection = collection
+        self.fetchResult = fetchResult
     }
 }
 
@@ -41,7 +43,7 @@ class ViewController: UIViewController {
                 let options = PHFetchOptions()
                 options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
                 let assets: PHFetchResult<PHAsset> = PHAsset.fetchAssets(in: collection, options: options)
-                self.albums.append(Album(title: title, count: assets.count, collection: collection))
+                self.albums.append(Album(title: title, count: assets.count, collection: collection, fetchResult: assets))
             })
         })
         
@@ -176,7 +178,6 @@ extension ViewController: UICollectionViewDataSource {
             viewController.title = currentAlbum.title
             return viewController
         }()
-//        PHPhotoLibrary.shared().unregisterChangeObserver(self)
         self.navigationController?.pushViewController(photoListViewController, animated: true)
     }
 }
@@ -190,14 +191,20 @@ extension ViewController: UICollectionViewDelegate {
 extension ViewController: PHPhotoLibraryChangeObserver {
     func photoLibraryDidChange(_ changeInstance: PHChange) {
         albums.forEach({
-            guard let changes = changeInstance.changeDetails(for: $0.collection) else { return }
-            if let changeCollection = changes.objectAfterChanges {
-                $0.collection = changeCollection
-            }
-        })
+            guard let changes = changeInstance.changeDetails(for: $0.fetchResult) else { return }
+            let changedAssets: PHFetchResult<PHAsset> = changes.fetchResultAfterChanges
+            $0.count = changedAssets.count
+            $0.fetchResult = changedAssets
 
+            guard let changes = changeInstance.changeDetails(for: $0.collection) else { return }
+            guard let changeCollection = changes.objectAfterChanges else { return }
+            $0.collection = changeCollection
+            guard let localizedTitle: String = changeCollection.localizedTitle else { return }
+            $0.title = localizedTitle
+        })
+       
         OperationQueue.main.addOperation {
-            self.collectionView.reloadSections(IndexSet(0...0))
+            self.collectionView.reloadData()
         }
     }
 }
