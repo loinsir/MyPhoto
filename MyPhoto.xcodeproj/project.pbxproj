@@ -91,6 +91,7 @@
 		19C9F1C726C68DF700323498 = {
 			isa = PBXGroup;
 			children = (
+				19275E4A26D4BCF000534F34 /* Simulator Screen Recording - iPhone 12.gif */,
 				19C9F1D226C68DF700323498 /* MyPhoto */,
 				19C9F1E926C68DF800323498 /* MyPhotoTests */,
 				19C9F1F426C68DF800323498 /* MyPhotoUITests */,
@@ -120,7 +121,6 @@
 				19150E0B26CBF6BF00E45BA5 /* PhotoCollectionViewCell.swift */,
 				190A6FC726C8D0B20087A4CA /* TitleHeaderView.swift */,
 				19C9F1D926C68DF700323498 /* Main.storyboard */,
-				19275E4A26D4BCF000534F34 /* Simulator Screen Recording - iPhone 12.gif */,
 				19C9F1DC26C68DF800323498 /* Assets.xcassets */,
 				19C9F1DE26C68DF800323498 /* LaunchScreen.storyboard */,
 				19C9F1E126C68DF800323498 /* Info.plist */,
